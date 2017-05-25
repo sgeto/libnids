@@ -1,0 +1,44 @@
+# Object files
+*.o
+
+# Libraries
+*.a
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+*.la
+*.lo
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Autotools
+Makefile
+
+libnids-1.*.tar.gz
+libnids-1.*.zip
+
+autom4te.cache
+.libs
+libnids-1.??
+
+config.h
+config.h.in
+config.h.in~
+
+config.guess
+config.sub
+configure
+install-sh
+aclocal.m4
+configure
+config.log
+config.status
+
+# Random stuff
+.prebuild*
