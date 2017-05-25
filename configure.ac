@@ -1,45 +1,69 @@
-dnl
-dnl configure.in for libnids.
-dnl
-dnl Dug Song <dugsong@monkey.org>
-dnl ... mantained by Nergal 
+#
+# configure.ac for libnids.
+#
+# Dug Song <dugsong@monkey.org>
+# ... mantained by Nergal
+# Modified by Ali Abdulkadir <autostart.ini@gmail.com>
 
-AC_INIT(src/libnids.c)
+AC_INIT(
+    [libnids],
+    [1.24],
+    [https://github.com/sgeto/libnids/issues],
+    [libdnet],
+    [https://github.com/sgeto/libnids])
 
-AC_CANONICAL_SYSTEM
+AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_SRCDIR([src/libnids.c])
+
+AC_CANONICAL_TARGET
 
 AC_CONFIG_HEADER(src/config.h)
+AC_CONFIG_MACRO_DIR([m4])
 
-dnl Initialize prefix.
-if test "$prefix" = "NONE" ; then
-   prefix="/usr/local"
+# Guess the root install directory (if none is provided)
+if test "${prefix}" = "NONE"; then
+    if test -w /usr/local; then
+        prefix=/usr/local
+    else
+        AC_PREFIX_PROGRAM($CC)
+    fi
 fi
 
-dnl Initialize exec_prefix.
-if test "$exec_prefix" = "NONE" ; then
-	exec_prefix=$prefix
+if test "${exec_prefix}" = "NONE"; then
+    exec_prefix=$prefix
 fi
 
-dnl Checks for programs.
+# To speed up the configure process on Windows, we will define a WIN32
+# variable this early and use it to exclude those checks that are not​
+# needed or will always fail on Windows.
+case "$target_os" in
+*mingw*)
+    WIN32=yes;;
+*)
+    WIN32=no;;
+esac
+AC_SUBST(WIN32)
+
+# Checks for programs.
 AC_PROG_CC
-AC_PROG_RANLIB
 AC_PROG_INSTALL
+AC_PROG_RANLIB
 
-dnl Checks for header files.
+# Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS(sys/time.h syslog.h unistd.h)
 
-dnl Checks for typedefs, structures, and compiler characteristics.
+# Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_C_INLINE
 AC_HEADER_TIME
 AC_C_BIGENDIAN
 
-dnl XXX - Linux sux.
+# XXX - Linux sux.
 CFLAGS="$CFLAGS -D_BSD_SOURCE"
-dnl Checks for library functions.
+# Checks for library functions.
 AC_CHECK_FUNCS(gettimeofday)
-dnl XXX - Solaris sux.
+# XXX - Solaris sux.
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(nsl, gethostbyname)
 
@@ -55,7 +79,7 @@ if test $ac_cv_lbl_unaligned_fail = yes ; then
             AC_DEFINE(LBL_ALIGN,1,[if unaligned access fails])
 fi
 
-dnl Checks for libpcap
+# Checks for libpcap
 AC_MSG_CHECKING(for libpcap)
 AC_ARG_WITH(libpcap,
 [  --with-libpcap=DIR	use libpcap build directory],
@@ -71,7 +95,7 @@ AC_ARG_WITH(libpcap,
 	PCAP_CFLAGS="-I$withval -I$withval/bpf"
 	PCAPLIB="-L$withval -lpcap"
      else
-        AC_ERROR(pcap.h or libpcap.a not found in $withval)
+        AC_MSG_ERROR(pcap.h or libpcap.a not found in $withval)
      fi
      ;;
   esac ],
@@ -84,13 +108,12 @@ AC_ARG_WITH(libpcap,
   else
 	TMP=$LIBS
 	LIBS="-lpcap $LIBS"
-	AC_TRY_LINK([#include <pcap.h>], pcap_open_offline("",""),
-	LIBPCAP_FOUND=1,LIBPCAP_FOUND=0)
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <pcap.h>]], [[pcap_open_offline("","")]])],[LIBPCAP_FOUND=1],[LIBPCAP_FOUND=0])
 	LIBS=$TMP
 	if test $LIBPCAP_FOUND = 1 ; then
 		PCAPLIB="-lpcap"
 	else
-		AC_ERROR(libpcap not found)
+		AC_MSG_ERROR(libpcap not found)
 	fi
   fi
   AC_MSG_RESULT(yes) ]
@@ -98,7 +121,7 @@ AC_ARG_WITH(libpcap,
 AC_SUBST(PCAP_CFLAGS)
 AC_SUBST(PCAPLIB)
 
-dnl Checks for libglib2.8
+# Checks for libglib2.8
 AC_ARG_ENABLE(libglib,
 [  --disable-libglib	use glib2 for multiprocessing support],
 [
@@ -113,7 +136,7 @@ AC_ARG_ENABLE(libglib,
 ]
 )
 
-dnl Checks for libnet
+# Checks for libnet
 AC_MSG_CHECKING(for libnet)
 AC_ARG_ENABLE(libnet, 
 [  --disable-libnet	whether to include code requiring libnet],
@@ -126,7 +149,7 @@ AC_ARG_ENABLE(libnet,
      LIBNET_VER=-1
      ;;
   *)
-        AC_ERROR(no arguments expected for --disable-libnet)
+        AC_MSG_ERROR(no arguments expected for --disable-libnet)
      ;;
   esac ]
 )
@@ -154,7 +177,7 @@ AC_ARG_WITH(libnet,
 	LNETLIB="-L$withval/src -lnet"
      else
 	echo "A working combination of libnet.h, libnet.a and libnet-config not found in $withval; get libnet from www.packetfactory.net/projects/libnet and reinstall"
-        AC_ERROR(libnet)
+        AC_MSG_ERROR(libnet)
      fi
      ;;
   esac ],
@@ -176,8 +199,7 @@ if test "x"$LIBNET_VER != "x"-1 ; then
 	TMPL="$LIBS"
 	CFLAGS="$CFLAGS $LNET_CFLAGS"
 	LIBS="$LNETLIB $LIBS"
-	AC_TRY_LINK([#include <libnet.h>], libnet_get_prand(0),
-		LIBNET_FOUND=1,LIBNET_FOUND=0)
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <libnet.h>]], [[libnet_get_prand(0)]])],[LIBNET_FOUND=1],[LIBNET_FOUND=0])
 	CFLAGS="$TMPC"
 	LIBS="$TMPL"
 	if test $LIBNET_FOUND = 1 ; then
@@ -185,7 +207,7 @@ if test "x"$LIBNET_VER != "x"-1 ; then
 		AC_MSG_RESULT(yes)
 	else
 		echo "Working libnet not found; get it from www.packetfactory.net/projects/libnet and reinstall"
-		AC_ERROR(libnet)
+		AC_MSG_ERROR(libnet)
 	fi
 fi
 
@@ -205,7 +227,7 @@ AC_ARG_ENABLE(shared,
      AC_MSG_RESULT(no)
      ;;
   *)
-        AC_ERROR(no arguments expected for --enable-shared)
+        AC_MSG_ERROR(no arguments expected for --enable-shared)
      ;;
   esac ],
   [AC_MSG_RESULT(no)]
@@ -213,27 +235,27 @@ AC_ARG_ENABLE(shared,
 AC_SUBST(BUILD_SHARED)
 
 AC_MSG_CHECKING(the name of struct icmp)
-AC_TRY_COMPILE([#include <sys/types.h>
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
-#include <netinet/ip_icmp.h>], struct icmphdr h;int c=h.type, ICMPHEADER=1,ICMPHEADER=0)
+#include <netinet/ip_icmp.h>]], [[struct icmphdr h;int c=h.type]])],[ICMPHEADER=1],[ICMPHEADER=0])
 AC_SUBST(ICMPHEADER)
 if test $ICMPHEADER = 1 ; then 
 	AC_MSG_RESULT(struct icmphdr) ; else AC_MSG_RESULT(struct icmp) 
 fi
 AC_MSG_CHECKING(if tcp states are defined)
-AC_TRY_COMPILE([#include <sys/types.h>
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
 #include <netinet/in.h>
-#include <netinet/tcp.h>], int c=TCP_ESTABLISHED,TCPSTATES=1,TCPSTATES=0)
+#include <netinet/tcp.h>]], [[int c=TCP_ESTABLISHED]])],[TCPSTATES=1],[TCPSTATES=0])
 AC_SUBST(TCPSTATES)
 if test $TCPSTATES = 1 ; then 
 	AC_MSG_RESULT(yes) ; else AC_MSG_RESULT(no) 
 fi
 
 AC_MSG_CHECKING(for bsd-ish struct udphdr)
-AC_TRY_COMPILE([#include <sys/types.h>
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
 #include <netinet/in.h>
-#include <netinet/udp.h>], struct udphdr h;int c=h.uh_ulen,HAVE_BSD_UDPHDR=1,HAVE_BSD_UDPHDR=0)
+#include <netinet/udp.h>]], [[struct udphdr h;int c=h.uh_ulen]])],[HAVE_BSD_UDPHDR=1],[HAVE_BSD_UDPHDR=0])
 AC_SUBST(HAVE_BSD_UDPHDR)
 if test $HAVE_BSD_UDPHDR = 1 ; then 
 	AC_MSG_RESULT(yes) ; else AC_MSG_RESULT(no) 
@@ -242,12 +264,12 @@ if test "x"$LIBNET_VER != "x"-1 ; then
 	TMP=$CFLAGS
 	CFLAGS="$CFLAGS $LNET_CFLAGS"
 	AC_MSG_CHECKING(libnet version)
-	AC_TRY_COMPILE([#include <libnet.h>], int c=LIBNET_PTAG_INITIALIZER,
-	LIBNET_VER=1,LIBNET_VER=0)
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <libnet.h>]], [[int c=LIBNET_PTAG_INITIALIZER]])],[LIBNET_VER=1],[LIBNET_VER=0])
 	CFLAGS=$TMP
 	if test $LIBNET_VER = 1 ; then 
 		AC_MSG_RESULT(looks new) ; else AC_MSG_RESULT(looks old) 
 	fi
 fi
 AC_SUBST(LIBNET_VER)
-AC_OUTPUT(Makefile src/Makefile samples/Makefile)
+AC_CONFIG_FILES([Makefile src/Makefile samples/Makefile])
+AC_OUTPUT

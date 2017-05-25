@@ -9,14 +9,14 @@ test -z "$srcdir" && srcdir=.
         exit 1
 }
 
-aclocal --force --warnings=all || exit 1
-autoconf --force --warnings=all || exit 1
-autoheader --force --warnings=all || exit 1
+autoreconf -ifvW all || exit 1
 
 if [ "$NOCONFIGURE" = "" ]; then
         $srcdir/configure "$@" || exit 1
 
-        if [ "$1" = "--help" ]; then exit 0 else
+        if [ "$1" = "--help" ]; then 
+                exit 0
+        else
                 echo "Now type \`make\' to compile" || exit 1
         fi
 else
